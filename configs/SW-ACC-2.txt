@@ -1,9 +1,5 @@
-! =============================================================
-! SW-ACC-2 — Access Switch 2
-! Role: VLAN 20 (Servers) + VLAN 30 (Guest) access ports
-!       Trunk uplink to SW-DIST Gi0/3
-! Port Security, BPDU Guard, Rapid PVST+
-! =============================================================
+! SW-ACC-2 - Access Switch 2
+! VLAN 20 server ports + VLAN 30 guest ports, trunk up to SW-DIST
 !
 version 15.9
 hostname SW-ACC-2
@@ -24,11 +20,9 @@ username admin privilege 15 algorithm-type scrypt secret <CHANGE-ME>
 banner motd #
 *************************************************************
 * AUTHORIZED ACCESS ONLY - ALL ACTIVITY IS MONITORED       *
-* Unauthorized access is prohibited and prosecutable        *
 *************************************************************
 #
 !
-! ---- VLAN Database ----
 vlan 10
  name STAFF
 vlan 20
@@ -38,60 +32,40 @@ vlan 30
 vlan 99
  name MGMT
 !
-! ---- Server Access Ports (Gi0/1 - Gi0/8) ----
-! VLAN 20: Internal servers (Wazuh, Prometheus)
-! Port Security: max 1 MAC, violation shutdown (servers = known MAC)
-! BPDU Guard + PortFast: access ports only, no downstream switches
-! CCNA: Network Access - VLANs and Port Security
-! Security+: Hardening - minimize attack surface on server ports
+! server ports - max 1 MAC, violation shutdown (servers have known MACs)
 interface range GigabitEthernet0/1 - 8
  description SERVER-PORT-VLAN20
  switchport mode access
  switchport access vlan 20
- !
  switchport port-security
  switchport port-security maximum 1
  switchport port-security violation shutdown
  switchport port-security mac-address sticky
- !
  spanning-tree portfast
  spanning-tree bpduguard enable
- !
  no shutdown
 !
-! ---- Guest Access Ports (Gi0/9 - Gi0/16) ----
-! VLAN 30: Guest WiFi / contractor devices
-! Port Security: max 1 MAC per port, restrict violation (log but don't hard-shutdown)
-! No sticky MAC — guests rotate frequently, sticky would lock the port
-! BPDU Guard: block rogue switch attachment on guest side
-! ACL enforcement happens upstream at SW-DIST Vlan30 SVI (GUEST-RESTRICT)
+! guest ports - restrict mode so violations log but dont hard-shutdown
+! no sticky MAC here, guests rotate too often
 interface range GigabitEthernet0/9 - 16
  description GUEST-PORT-VLAN30
  switchport mode access
  switchport access vlan 30
- !
  switchport port-security
  switchport port-security maximum 1
  switchport port-security violation restrict
- !
  spanning-tree portfast
  spanning-tree bpduguard enable
- !
  no shutdown
 !
-! ---- Unused Ports: Shut down and assign to MGMT VLAN ----
-! Security best practice: all unused ports admin shutdown
 interface range GigabitEthernet0/17 - 23
- description UNUSED-DISABLED
+ description unused
  switchport mode access
  switchport access vlan 99
  shutdown
 !
-! ---- Uplink Trunk to SW-DIST Gi0/3 ----
-! Root Guard: prevents SW-ACC-2 from becoming STP root
-! Explicit VLAN whitelist — only required VLANs on trunk
 interface GigabitEthernet0/24
- description UPLINK-TO-SW-DIST-Gi0/3
+ description uplink to SW-DIST Gi0/3
  switchport trunk encapsulation dot1q
  switchport mode trunk
  switchport trunk allowed vlan 10,20,30,99
@@ -99,22 +73,16 @@ interface GigabitEthernet0/24
  spanning-tree guard root
  no shutdown
 !
-! ---- Management SVI (VLAN 99) ----
-! Out-of-band management — isolated from both Server and Guest VLANs
 interface Vlan99
- description OUT-OF-BAND-MANAGEMENT
+ description management
  ip address 10.10.99.12 255.255.255.0
  no shutdown
 !
 ip default-gateway 10.10.99.1
 !
-! ---- Spanning Tree ----
-! Rapid PVST+ for sub-2-second convergence
-! LoopGuard on all non-designated ports
 spanning-tree mode rapid-pvst
 spanning-tree loopguard default
 !
-! ---- VTY Lines (SSH only, no Telnet) ----
 line vty 0 4
  login local
  transport input ssh
@@ -130,21 +98,14 @@ no ip http server
 no ip http secure-server
 no cdp run
 !
-! ---- SNMPv3 (AuthSHA + PrivAES128, no community strings) ----
-! CCNA: Network Management - SNMPv3
-! ITIL: Event Management - SNMP traps feed Prometheus/Wazuh
 snmp-server group MONITORING v3 priv
 snmp-server user wazuh-monitor MONITORING v3 auth sha Auth@2026 priv aes 128 Priv@2026
 snmp-server host 10.10.20.10 version 3 priv wazuh-monitor
-snmp-server contact NOC-Team noc@lab.internal
+snmp-server contact noc@lab.internal
 snmp-server location Lab-Rack-A1
 !
-! ---- NTP ----
 ntp server 10.10.20.10
 !
-! ---- Logging to Wazuh SIEM ----
-! Security+: Security Operations - Centralized Log Management
-! ITIL: Event Management - all events forwarded to SIEM
 logging host 10.10.20.10 transport udp port 514
 logging trap informational
 logging source-interface Vlan99
@@ -152,14 +113,9 @@ logging buffered 8192 informational
 !
 end
 !
-! ---- Verification Commands ----
 ! show vlan brief
 ! show interfaces trunk
-! show port-security interface gi0/1      (Server port — should show 1 sticky MAC)
-! show port-security interface gi0/9      (Guest port — restrict mode)
-! show port-security address
+! show port-security interface gi0/1
+! show port-security interface gi0/9
 ! show spanning-tree vlan 20
 ! show spanning-tree vlan 30
-! show spanning-tree interface gi0/24 detail
-! ping 10.10.99.1 source vlan 99          (should work — MGMT reachable)
-! ping 10.10.20.10 source vlan 30         (should FAIL — blocked at SW-DIST ACL)
