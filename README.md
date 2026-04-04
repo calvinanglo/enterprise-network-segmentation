@@ -94,3 +94,4 @@ Build order matters because each phase depends on the last:
                          ```
 
                          Part of a 5-project lab portfolio. Next project adds Wazuh SIEM on top of this infrastructure.
+
