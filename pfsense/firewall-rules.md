@@ -66,3 +66,4 @@ pfSense CE 2.7.x running as the perimeter firewall. WAN gets DHCP from the hyper
                           ssh admin@10.10.10.100      # should work, rule 5
                           curl https://example.com    # should fail, no NAT for mgmt
                           ```
+
