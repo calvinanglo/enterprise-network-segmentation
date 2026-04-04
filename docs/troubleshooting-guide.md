@@ -137,3 +137,4 @@ show ntp status                 NTP sync state
 show interfaces status          quick view of all port states
 show log | include ERR          error log entries
 ```
+
