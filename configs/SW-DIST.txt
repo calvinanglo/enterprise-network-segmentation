@@ -1,7 +1,5 @@
-! =============================================================
-! SW-DIST — Distribution Switch (Layer 3)
-! Role: Inter-VLAN routing, OSPF, ACL enforcement, STP root
-! =============================================================
+! SW-DIST - Distribution Switch (Layer 3)
+! inter-VLAN routing, OSPF, ACL enforcement, STP root
 !
 version 15.9
 hostname SW-DIST
@@ -10,7 +8,6 @@ no service finger
 no service udp-small-servers
 service password-encryption
 !
-! Enable Layer 3 routing
 ip routing
 ip cef
 !
@@ -25,11 +22,10 @@ username admin privilege 15 algorithm-type scrypt secret <CHANGE-ME>
 !
 banner motd #
 *************************************************************
-*  AUTHORIZED ACCESS ONLY - ALL ACTIVITY IS MONITORED      *
+* AUTHORIZED ACCESS ONLY - ALL ACTIVITY IS MONITORED       *
 *************************************************************
 #
 !
-! ---- VLAN Database ----
 vlan 10
  name STAFF
 vlan 20
@@ -39,39 +35,35 @@ vlan 30
 vlan 99
  name MGMT
 !
-! ---- SVIs (Layer 3 Gateways for each VLAN) ----
 interface Vlan10
- description STAFF-GATEWAY
+ description STAFF gateway
  ip address 10.10.10.1 255.255.255.0
  no shutdown
 !
 interface Vlan20
- description SERVERS-GATEWAY
+ description SERVERS gateway
  ip address 10.10.20.1 255.255.255.0
  no shutdown
 !
 interface Vlan30
- description GUEST-GATEWAY
+ description GUEST gateway
  ip address 10.10.30.1 255.255.255.0
- ! ACL applied below restricts Guest traffic
  ip access-group GUEST-RESTRICT in
  no shutdown
 !
 interface Vlan99
- description MGMT-GATEWAY
+ description MGMT gateway
  ip address 10.10.99.1 255.255.255.0
  no shutdown
 !
-! ---- Routed Uplink to R1-CORE ----
 interface GigabitEthernet0/1
- description UPLINK-TO-R1-CORE
+ description uplink to R1-CORE
  no switchport
  ip address 10.0.1.2 255.255.255.252
  no shutdown
 !
-! ---- Trunk Downlinks to Access Switches ----
 interface GigabitEthernet0/2
- description DOWNLINK-TO-SW-ACC-1
+ description trunk to SW-ACC-1
  switchport trunk encapsulation dot1q
  switchport mode trunk
  switchport trunk allowed vlan 10,20,30,99
@@ -79,59 +71,41 @@ interface GigabitEthernet0/2
  no shutdown
 !
 interface GigabitEthernet0/3
- description DOWNLINK-TO-SW-ACC-2
+ description trunk to SW-ACC-2
  switchport trunk encapsulation dot1q
  switchport mode trunk
  switchport trunk allowed vlan 10,20,30,99
  switchport trunk native vlan 99
  no shutdown
 !
-! ---- Disable Unused Interfaces ----
 interface range GigabitEthernet0/4 - 24
- description UNUSED
+ description unused
  switchport mode access
  switchport access vlan 99
  shutdown
 !
-! ---- OSPF Area 0 ----
 router ospf 1
  router-id 2.2.2.2
- !
- ! Uplink to core router
  network 10.0.1.0 0.0.0.3 area 0
- !
- ! All VLAN subnets advertised into OSPF
  network 10.10.10.0 0.0.0.255 area 0
  network 10.10.20.0 0.0.0.255 area 0
  network 10.10.30.0 0.0.0.255 area 0
  network 10.10.99.0 0.0.0.255 area 0
- !
- ! Passive on access VLANs - no OSPF hellos toward end devices
- ! Prevents rogue OSPF injection from workstations/servers
+ ! passive on all access VLANs so workstations cant inject OSPF routes
  passive-interface Vlan10
  passive-interface Vlan20
  passive-interface Vlan30
  passive-interface Vlan99
 !
-! ---- ACL: Block Guest from Internal VLANs ----
-! Security+: Network Architecture - Segmentation and Defense-in-Depth
-! CCNA: Security Fundamentals - ACLs
+! Guest isolation ACL - blocks VLAN30 from reaching internal subnets
+! log keyword on deny entries so hits show up in Wazuh
 ip access-list extended GUEST-RESTRICT
- !
- remark === GUEST VLAN SECURITY POLICY ===
- remark Block Guest (VLAN30) from reaching Server VLAN
- deny   ip 10.10.30.0 0.0.0.255 10.10.20.0 0.0.0.255 log
- !
- remark Block Guest from reaching Staff VLAN
- deny   ip 10.10.30.0 0.0.0.255 10.10.10.0 0.0.0.255 log
- !
- remark Block Guest from reaching Management VLAN
- deny   ip 10.10.30.0 0.0.0.255 10.10.99.0 0.0.0.255 log
- !
- remark Allow Guest internet (pfSense NAT provides internet access)
+ deny ip 10.10.30.0 0.0.0.255 10.10.20.0 0.0.0.255 log
+ deny ip 10.10.30.0 0.0.0.255 10.10.10.0 0.0.0.255 log
+ deny ip 10.10.30.0 0.0.0.255 10.10.99.0 0.0.0.255 log
  permit ip 10.10.30.0 0.0.0.255 any
 !
-! ---- Spanning Tree: SW-DIST is STP Root for all VLANs ----
+! SW-DIST is STP root for all VLANs - lower priority wins
 spanning-tree mode rapid-pvst
 spanning-tree vlan 10 priority 4096
 spanning-tree vlan 20 priority 4096
@@ -139,7 +113,6 @@ spanning-tree vlan 30 priority 4096
 spanning-tree vlan 99 priority 4096
 spanning-tree loopguard default
 !
-! ---- VTY Lines ----
 line vty 0 4
  login local
  transport input ssh
@@ -154,17 +127,14 @@ no ip http server
 no ip http secure-server
 no cdp run
 !
-! ---- SNMPv3 ----
 snmp-server group MONITORING v3 priv
 snmp-server user wazuh-monitor MONITORING v3 auth sha Auth@2026 priv aes 128 Priv@2026
 snmp-server host 10.10.20.10 version 3 priv wazuh-monitor
-snmp-server contact NOC-Team noc@lab.internal
+snmp-server contact noc@lab.internal
 snmp-server location Lab-Rack-A1
 !
-! ---- NTP ----
 ntp server 10.10.20.10
 !
-! ---- Logging to Wazuh SIEM ----
 logging host 10.10.20.10 transport udp port 514
 logging trap informational
 logging buffered 16384 informational
@@ -172,12 +142,10 @@ logging source-interface Vlan99
 !
 end
 !
-! ---- Verification Commands ----
 ! show vlan brief
 ! show interfaces trunk
 ! show ip route ospf
 ! show ip ospf neighbor
 ! show ip access-lists GUEST-RESTRICT
 ! show spanning-tree vlan 10
-! ping 10.10.10.100 source vlan 10   (should work - Staff)
-! ping 10.10.20.10 source vlan 30    (should FAIL - Guest blocked by ACL)
+! ping 10.10.20.10 source vlan 30   <- should fail, ACL drops it
