@@ -189,3 +189,4 @@ Logs flowing to Wazuh at 10.10.20.10.
 ## Summary
 
 All 12 checks passed. OSPF up, VLANs working, ACL blocking guest traffic correctly, SSH hardened, SNMPv3 configured, syslog running.
+
