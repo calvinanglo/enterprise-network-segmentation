@@ -1,0 +1,147 @@
+! =============================================================
+! SW-ACC-2 — Access Switch 2
+! Role: VLAN 30 (Guest) access ports, trunk uplink to SW-DIST
+! Port Security, BPDU Guard, Rapid PVST+
+! NOTE: Guest ports are strictly isolated — no access to Staff
+!       or Server VLANs. ACL enforcement at SW-DIST Vlan30 SVI.
+! =============================================================
+!
+version 15.9
+hostname SW-ACC-2
+!
+no service finger
+no service udp-small-servers
+service password-encryption
+!
+ip domain-name lab.internal
+crypto key generate rsa modulus 2048
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+ip ssh logging events
+!
+username admin privilege 15 algorithm-type scrypt secret <CHANGE-ME>
+!
+banner motd #
+*************************************************************
+* AUTHORIZED ACCESS ONLY - ALL ACTIVITY IS MONITORED       *
+* Unauthorized access is prohibited and prosecutable        *
+*************************************************************
+#
+!
+! ---- VLAN Database ----
+vlan 10
+ name STAFF
+vlan 20
+ name SERVERS
+vlan 30
+ name GUEST
+vlan 99
+ name MGMT
+!
+! ---- Guest Access Ports (Gi0/1 - Gi0/12) ----
+! Port Security: max 1 MAC per port (one device per guest drop)
+! BPDU Guard: prevents rogue switch attachment on guest ports
+! PortFast: immediate forwarding for end-user devices
+! CCNA: Switching - VLANs and Port Security
+! Security+: Network Hardening - Minimize Attack Surface
+interface range GigabitEthernet0/1 - 12
+ description GUEST-DEVICE
+ switchport mode access
+ switchport access vlan 30
+ !
+ ! Port Security
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ !
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ !
+ no shutdown
+!
+! ---- Unused Ports: Shut down and assign to MGMT VLAN ----
+! Security best practice: all unused ports admin shutdown
+interface range GigabitEthernet0/13 - 23
+ description UNUSED-DISABLED
+ switchport mode access
+ switchport access vlan 99
+ shutdown
+!
+! ---- Uplink Trunk to SW-DIST ----
+! Root Guard: prevents SW-ACC-2 from becoming STP root
+! Only VLANs 10,20,30,99 permitted — explicit whitelist
+interface GigabitEthernet0/24
+ description UPLINK-TO-SW-DIST-Gi0/3
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,99
+ switchport trunk native vlan 99
+ spanning-tree guard root
+ no shutdown
+!
+! ---- Management SVI (VLAN 99) ----
+! Out-of-band management — separate from Guest traffic
+interface Vlan99
+ description OUT-OF-BAND-MANAGEMENT
+ ip address 10.10.99.12 255.255.255.0
+ no shutdown
+!
+! Default gateway for management traffic
+ip default-gateway 10.10.99.1
+!
+! ---- Spanning Tree ----
+! Rapid PVST+ — sub-2-second convergence
+! LoopGuard — detects unidirectional link failures
+spanning-tree mode rapid-pvst
+spanning-tree loopguard default
+!
+! ---- VTY Lines (SSH only, no Telnet) ----
+line vty 0 4
+ login local
+ transport input ssh
+ exec-timeout 5 0
+ logging synchronous
+!
+line console 0
+ login local
+ exec-timeout 10 0
+ logging synchronous
+!
+! ---- Disable HTTP Management Interface ----
+no ip http server
+no ip http secure-server
+no cdp run
+!
+! ---- SNMPv3 (no community strings, auth+priv) ----
+! CCNA: Network Management - SNMPv3
+! ITIL: Event Management - SNMP traps feed Prometheus/Wazuh
+snmp-server group MONITORING v3 priv
+snmp-server user wazuh-monitor MONITORING v3 auth sha Auth@2026 priv aes 128 Priv@2026
+snmp-server host 10.10.20.10 version 3 priv wazuh-monitor
+snmp-server contact NOC-Team noc@lab.internal
+snmp-server location Lab-Rack-A1
+!
+! ---- NTP ----
+ntp server 10.10.20.10
+!
+! ---- Logging to Wazuh SIEM ----
+! Security+: Security Operations - Log Management
+! ITIL: Event Management - all events forwarded to SIEM
+logging host 10.10.20.10 transport udp port 514
+logging trap informational
+logging source-interface Vlan99
+logging buffered 8192 informational
+!
+end
+!
+! ---- Verification Commands ----
+! show vlan brief
+! show interfaces trunk
+! show port-security interface gi0/1
+! show port-security address
+! show spanning-tree vlan 30
+! show spanning-tree interface gi0/24 detail
+! ping 10.10.99.1 source vlan 99         (should work - MGMT reachable)
+! ping 10.10.10.100 source vlan 30       (should FAIL - blocked by ACL at SW-DIST)
