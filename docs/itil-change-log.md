@@ -41,3 +41,4 @@ Each change has a rollback in case something goes wrong:
         - - CHG-006: `transport input telnet ssh` on VTY lines as a recovery option
           - - CHG-007: disable firewall rules temporarily, revert default gateway on R1-CORE
             - - CHG-008: re-add community strings if v3 polling breaks
+
