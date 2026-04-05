@@ -13,6 +13,7 @@ crypto key generate rsa modulus 2048
 ip ssh version 2
 ip ssh time-out 60
 ip ssh authentication-retries 3
+ip ssh logging events
 !
 username admin privilege 15 algorithm-type scrypt secret <CHANGE-ME>
 !
@@ -80,6 +81,7 @@ line vty 0 4
 line console 0
  login local
  exec-timeout 10 0
+ logging synchronous
 !
 no ip http server
 no ip http secure-server
@@ -88,6 +90,8 @@ no cdp run
 snmp-server group MONITORING v3 priv
 snmp-server user wazuh-monitor MONITORING v3 auth sha Auth@2026 priv aes 128 Priv@2026
 snmp-server host 10.10.20.10 version 3 priv wazuh-monitor
+snmp-server contact noc@lab.internal
+snmp-server location Lab-Rack-A1
 !
 ntp server 10.10.20.10
 !
