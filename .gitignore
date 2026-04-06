@@ -1,0 +1,7 @@
+*.gns3
+*.gns3p
+project-files/
+.DS_Store
+*.swp
+*.bak
+Thumbs.db

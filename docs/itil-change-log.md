@@ -34,11 +34,11 @@ Tracking changes to this environment the same way I would in a production ITIL s
 Each change has a rollback in case something goes wrong:
 
 - CHG-001: `no vlan 10/20/30/99` on both access switches
-- - CHG-002: `switchport mode access` on the trunk interfaces
-  - - CHG-003: `no ip routing` on SW-DIST, remove SVI IPs
-    - - CHG-004: `no router ospf 1` on both devices
-      - - CHG-005: `no ip access-group GUEST-RESTRICT in` on Vlan30
-        - - CHG-006: `transport input telnet ssh` on VTY lines as a recovery option
-          - - CHG-007: disable firewall rules temporarily, revert default gateway on R1-CORE
-            - - CHG-008: re-add community strings if v3 polling breaks
+- CHG-002: `switchport mode access` on the trunk interfaces
+- CHG-003: `no ip routing` on SW-DIST, remove SVI IPs
+- CHG-004: `no router ospf 1` on both devices
+- CHG-005: `no ip access-group GUEST-RESTRICT in` on Vlan30
+- CHG-006: `transport input telnet ssh` on VTY lines as a recovery option
+- CHG-007: disable firewall rules temporarily, revert default gateway on R1-CORE
+- CHG-008: re-add community strings if v3 polling breaks
 
