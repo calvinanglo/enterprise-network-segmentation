@@ -15,12 +15,12 @@ Rules are top-down, first match wins. Everything is logged.
 |---|--------|--------|-------------|------|-------|
 | 1 | Pass | 10.10.10.0/24 | any | any | Staff, full access |
 | 2 | Pass | 10.10.20.0/24 | any | any | Servers, full access |
-| 3 | Block | 10.10.30.0/24 | 10.0.0.0/8 | any | Guest blocked from all internal RFC1918 |
+| 3 | Block | 10.10.30.0/24 | RFC1918_ALIAS | any | Guest blocked from all RFC1918 internal ranges (via alias) |
 | 4 | Pass | 10.10.30.0/24 | any | 80, 443 | Guest gets HTTP/HTTPS only |
 | 5 | Pass | 10.10.99.0/24 | any | 22 | MGMT can SSH out |
 | 6 | Block | any | any | any | Implicit deny, log everything |
 
-Rule 3 blocks 10.0.0.0/8 rather than just specific subnets so any future VLANs added to the 10.x space are denied by default until explicitly permitted. Easier to maintain than keeping a list of per-subnet rules.
+Rule 3 uses the RFC1918 alias (covering 10.0.0.0/8, 172.16.0.0/12, and 192.168.0.0/16) so guests are blocked from all private address space, not just the 10.x range. Any future VLANs in any RFC1918 range are denied by default until explicitly permitted. Easier to maintain than keeping a list of per-subnet rules.
 
 ## WAN Rules
 

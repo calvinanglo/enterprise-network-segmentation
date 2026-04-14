@@ -2,6 +2,26 @@
 
 Built a segmented network using Cisco IOS devices and pfSense. The goal was to get hands-on with VLANs, OSPF, ACLs, and firewall rules in a setup that mirrors what you'd actually see in a small enterprise environment. Everything is version controlled here so I can track changes and roll back if something breaks.
 
+## Project Series
+
+This is **Project 1 of 5** in a production enterprise environment build. Each project builds on the previous one.
+
+| # | Project | What It Adds |
+|---|---------|-------------|
+| 1 | [Enterprise Network Segmentation](https://github.com/calvinanglo/enterprise-network-segmentation) | VLANs, OSPF, ACLs, pfSense firewall |
+| 2 | [Wazuh SIEM Deployment](https://github.com/calvinanglo/wazuh-siem-deployment) | Centralized log collection, threat detection, incident response |
+| 3 | [Compliance Hardening Pipeline](https://github.com/calvinanglo/compliance-hardening-pipeline) | Automated CIS benchmarks across all devices |
+| 4 | [Network Monitoring Stack](https://github.com/calvinanglo/network-monitoring-stack) | Prometheus, Grafana, SNMP monitoring, SLA dashboards |
+| 5 | [DR & BC Simulation](https://github.com/calvinanglo/dr-bc-simulation) | Disaster recovery testing, backup validation, RTO/RPO measurement |
+
+### Prerequisites
+- GNS3 or EVE-NG with Cisco IOSv images
+- pfSense CE 2.7.x VM
+- 8GB RAM minimum
+
+### What's Next
+After completing this project, continue to [Project 2: Wazuh SIEM Deployment](https://github.com/calvinanglo/wazuh-siem-deployment) to add centralized security monitoring to this network. The Wazuh server will sit on VLAN 20 (10.10.20.10) and collect syslog from all four Cisco devices and pfSense.
+
 ## What I built
 
 Four VLANs across two access switches feeding into a Layer 3 distribution switch, which connects up to a core router, which connects to pfSense as the perimeter firewall. pfSense handles NAT and zone-based rules. All syslog and SNMP traffic goes to a central monitoring host at 10.10.20.10 (Wazuh/Prometheus).
